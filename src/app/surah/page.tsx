@@ -1,68 +1,159 @@
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpen } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { BookOpen, PlayCircle, PauseCircle, Terminal, Info } from 'lucide-react';
 import Link from 'next/link';
 
-const surahs = [
-  { no: 1, name: 'Al-Fatiha', meaning: 'The Opening', difficulty: 'Easy' },
-  { no: 112, name: 'Al-Ikhlas', meaning: 'The Sincerity', difficulty: 'Easy' },
-  { no: 113, name: 'Al-Falaq', meaning: 'The Daybreak', difficulty: 'Easy' },
-  { no: 114, name: 'An-Nas', meaning: 'The Mankind', difficulty: 'Easy' },
-  { no: 18, name: 'Al-Kahf', meaning: 'The Cave', difficulty: 'Medium' },
-  { no: 36, name: 'Ya-Sin', meaning: 'Ya Sin', difficulty: 'Medium' },
-  { no: 55, name: 'Ar-Rahman', meaning: 'The Most Merciful', difficulty: 'Medium' },
-  { no: 67, name: 'Al-Mulk', meaning: 'The Sovereignty', difficulty: 'Medium' },
-  { no: 2, name: 'Al-Baqarah', meaning: 'The Cow', difficulty: 'Hard' },
-  { no: 3, name: 'Aal-E-Imran', meaning: 'The Family of Imran', difficulty: 'Hard' },
-  { no: 4, name: 'An-Nisa', meaning: "The Women", difficulty: 'Hard' },
-  { no: 5, name: 'Al-Maidah', meaning: "The Table Spread", difficulty: 'Hard' },
-];
+interface Surah {
+  number: number;
+  name: string;
+  englishName: string;
+  englishNameTranslation: string;
+  numberOfAyahs: number;
+  revelationType: string;
+}
 
-const difficulties = ['Easy', 'Medium', 'Hard'];
+const difficulties = {
+  Easy: (ayahs: number) => ayahs <= 20,
+  Medium: (ayahs: number) => ayahs > 20 && ayahs <= 80,
+  Hard: (ayahs: number) => ayahs > 80,
+};
 
-function SurahCard({ surah }: { surah: typeof surahs[0] }) {
+function SurahCard({ surah, onPlay, isPlaying }: { surah: Surah, onPlay: (surahNumber: number) => void, isPlaying: boolean }) {
   return (
-    <Link href="#" legacyBehavior>
-      <a className="block">
-        <Card className="transform transition-transform hover:-translate-y-1 hover:shadow-lg">
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="font-headline text-primary">{surah.no}. {surah.name}</CardTitle>
-                <CardDescription>{surah.meaning}</CardDescription>
-              </div>
-              <BookOpen className="h-6 w-6 text-accent" />
-            </div>
-          </CardHeader>
-        </Card>
-      </a>
-    </Link>
+    <Card className="transform transition-transform hover:-translate-y-1 hover:shadow-lg flex flex-col">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <Link href={`/surah/${surah.number}`} className="group">
+            <CardTitle className="font-headline text-primary group-hover:text-accent transition-colors">{surah.number}. {surah.englishName}</CardTitle>
+            <p className="text-muted-foreground">{surah.englishNameTranslation}</p>
+            <p className="text-sm text-muted-foreground mt-1">{surah.name}</p>
+          </Link>
+          <button onClick={() => onPlay(surah.number)} className="text-accent transition-transform hover:scale-110 flex-shrink-0 ml-4">
+            {isPlaying ? <PauseCircle className="h-8 w-8" /> : <PlayCircle className="h-8 w-8" />}
+          </button>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-grow flex items-end justify-between text-sm text-muted-foreground">
+         <p>{surah.numberOfAyahs} Ayahs</p>
+         <Link href={`/surah/${surah.number}`} className="group flex items-center gap-1 hover:text-accent">
+            Read <Info className="h-4 w-4" />
+         </Link>
+      </CardContent>
+    </Card>
   );
 }
 
 export default function SurahPage() {
+  const [surahs, setSurahs] = useState<Surah[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [playingSurah, setPlayingSurah] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    async function fetchSurahs() {
+      try {
+        const response = await fetch('https://api.alquran.cloud/v1/surah');
+        if (!response.ok) {
+          throw new Error('Failed to fetch Surahs.');
+        }
+        const data = await response.json();
+        setSurahs(data.data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchSurahs();
+    
+    return () => {
+        if(audioRef.current){
+            audioRef.current.pause();
+        }
+    }
+  }, []);
+
+  const handlePlay = (surahNumber: number) => {
+    if (playingSurah === surahNumber) {
+      // Pause
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      setPlayingSurah(null);
+    } else {
+      // Play new surah
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      const audio = new Audio(`https://server8.mp3quran.net/afs/${String(surahNumber).padStart(3, '0')}.mp3`);
+      audioRef.current = audio;
+      audio.play();
+      setPlayingSurah(surahNumber);
+      audio.onended = () => setPlayingSurah(null);
+      audio.onerror = () => {
+          setError(`Could not play audio for Surah ${surahNumber}.`);
+          setPlayingSurah(null);
+      }
+    }
+  };
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+          {[...Array(9)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <Alert variant="destructive" className="mt-4">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      );
+    }
+
+    return Object.entries(difficulties).map(([level, check]) => (
+      <TabsContent key={level} value={level}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+          {surahs
+            .filter(s => check(s.numberOfAyahs))
+            .map((surah) => (
+              <SurahCard 
+                key={surah.number} 
+                surah={surah} 
+                onPlay={handlePlay}
+                isPlaying={playingSurah === surah.number}
+              />
+            ))}
+        </div>
+      </TabsContent>
+    ));
+  };
+
   return (
     <div>
       <Header title="Surah Library" />
       <main className="p-4 sm:p-6">
         <Tabs defaultValue="Easy" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-primary/10">
-            {difficulties.map((level) => (
+            {Object.keys(difficulties).map((level) => (
               <TabsTrigger key={level} value={level} className="font-headline text-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 {level}
               </TabsTrigger>
             ))}
           </TabsList>
-          {difficulties.map((level) => (
-            <TabsContent key={level} value={level}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                {surahs.filter(s => s.difficulty === level).map((surah) => (
-                  <SurahCard key={surah.no} surah={surah} />
-                ))}
-              </div>
-            </TabsContent>
-          ))}
+          {renderContent()}
         </Tabs>
       </main>
     </div>
