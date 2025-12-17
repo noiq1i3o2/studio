@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,8 +26,8 @@ interface Surah {
   }
 }
 
-export default function SurahDetailPage({ params }: { params: { surahNumber: string } }) {
-  const surahNumber = params.surahNumber;
+export default function SurahDetailPage({ params }: { params: Promise<{ surahNumber: string }> }) {
+  const { surahNumber } = use(params);
   const [surah, setSurah] = useState<Surah | null>(null);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
