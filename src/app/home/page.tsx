@@ -40,8 +40,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {topics.map((topic) => (
-            <Link href={topic.href} key={topic.title} legacyBehavior>
-              <a className="block group">
+            <Link href={topic.href} key={topic.title} className="block group">
                 <Card className="h-full bg-card/70 backdrop-blur-sm border-white/20 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:bg-card/90">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="font-headline text-2xl font-bold text-primary">{topic.title}</CardTitle>
@@ -54,7 +53,6 @@ export default function HomePage() {
                     </div>
                   </CardContent>
                 </Card>
-              </a>
             </Link>
           ))}
         </div>
