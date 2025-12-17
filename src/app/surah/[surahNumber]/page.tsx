@@ -11,6 +11,7 @@ interface Ayah {
   number: number;
   text: string;
   numberInSurah: number;
+  audio: string;
 }
 
 interface Surah {
@@ -26,6 +27,7 @@ interface Surah {
 }
 
 export default function SurahDetailPage({ params }: { params: { surahNumber: string } }) {
+  const { surahNumber } = params;
   const [surah, setSurah] = useState<Surah | null>(null);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -36,7 +38,7 @@ export default function SurahDetailPage({ params }: { params: { surahNumber: str
     async function fetchSurah() {
       try {
         setLoading(true);
-        const response = await fetch(`https://api.alquran.cloud/v1/surah/${params.surahNumber}/editions/quran-uthmani,ar.alafasy`);
+        const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/editions/quran-uthmani,ar.alafasy`);
         if (!response.ok) {
           throw new Error('Failed to fetch Surah details.');
         }
@@ -55,8 +57,12 @@ export default function SurahDetailPage({ params }: { params: { surahNumber: str
         setSurah(combinedSurah);
 
         if (audioData.ayahs.length > 0) {
-            const audioUrl = audioData.ayahs[0].audio.replace(/\/([0-9]+)\/low/, '/_a_');
-            const surahAudioUrl = audioUrl.substring(0, audioUrl.lastIndexOf('/'));
+            // This constructs a URL to fetch the full Surah audio, not just a single Ayah.
+            const firstAyahAudioUrl = audioData.ayahs[0].audio;
+            // It replaces the ayah number part with a special string `_a_` that the API might use for full surah audio, or constructs it differently.
+            // Example: "https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3" becomes "https://cdn.islamic.network/quran/audio/128/ar.alafasy.mp3"
+            // Let's try a more reliable way.
+             const surahAudioUrl = `https://server8.mp3quran.net/afs/${String(surahNumber).padStart(3, '0')}.mp3`;
             const audioInstance = new Audio(surahAudioUrl);
             audioInstance.onended = () => setIsPlaying(false);
             setAudio(audioInstance);
@@ -76,7 +82,7 @@ export default function SurahDetailPage({ params }: { params: { surahNumber: str
         audio.pause();
       }
     };
-  }, [params.surahNumber]);
+  }, [surahNumber]);
 
   const togglePlay = () => {
     if (audio) {
@@ -134,9 +140,11 @@ export default function SurahDetailPage({ params }: { params: { surahNumber: str
                 <CardTitle className="font-headline text-3xl text-primary">{surah.name}</CardTitle>
                 <p className="text-muted-foreground">{surah.englishNameTranslation}</p>
               </div>
-              <button onClick={togglePlay} className="text-accent transition-transform hover:scale-110">
-                {isPlaying ? <PauseCircle className="h-12 w-12" /> : <PlayCircle className="h-12 w-12" />}
-              </button>
+              {audio && (
+                <button onClick={togglePlay} className="text-accent transition-transform hover:scale-110">
+                    {isPlaying ? <PauseCircle className="h-12 w-12" /> : <PlayCircle className="h-12 w-12" />}
+                </button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
