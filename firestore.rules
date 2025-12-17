@@ -1,3 +1,4 @@
+
 /**
  * # Firestore Security Rules: Deen Journey
  *
@@ -97,7 +98,7 @@ service cloud.firestore {
       allow list: if false; // Disallow user enumeration for security
       allow create: if isOwner(userId) && clientSetsCorrectId(userId);
       allow update: if isExistingOwner(userId) && idIsImmutable();
-      allow delete: if isExistingOwner(userId) && isVerifiedEmailUser();
+      allow delete: if isOwner(userId);
     }
   }
 }

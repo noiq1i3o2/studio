@@ -1,11 +1,22 @@
 
 'use client';
 
-import { ArrowLeft, LogOut } from 'lucide-react';
+import { ArrowLeft, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from './ui/button';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback } from './ui/avatar';
+import Link from 'next/link';
+
 
 type HeaderProps = {
   title: string;
@@ -14,10 +25,15 @@ type HeaderProps = {
 export function Header({ title }: HeaderProps) {
   const router = useRouter();
   const auth = useAuth();
+  const { user } = useUser();
 
   const handleSignOut = () => {
     signOut(auth);
     router.push('/');
+  }
+
+  const getInitials = (email: string | null | undefined) => {
+    return email ? email.charAt(0).toUpperCase() : <UserIcon className="h-5 w-5" />;
   }
 
   return (
@@ -29,10 +45,31 @@ export function Header({ title }: HeaderProps) {
         </Button>
         <h1 className="font-headline text-xl font-semibold text-primary">{title}</h1>
       </div>
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSignOut}>
-        <LogOut className="h-4 w-4" />
-        <span className="sr-only">Sign Out</span>
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
+            <Avatar className='h-8 w-8'>
+              <AvatarFallback className='bg-primary text-primary-foreground'>
+                {getInitials(user?.email)}
+              </AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href="/settings">
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Settings</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Sign Out</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
   );
 }
