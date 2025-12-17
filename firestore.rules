@@ -15,9 +15,9 @@
  * ## Key Security Decisions
  * - **User Data Privacy**: Users can only read or write their own profile document.
  *   Listing the entire `/users` collection is explicitly disallowed to prevent user enumeration.
- * - **Email Verification**: To enhance security and prevent abuse, any modification (`update`, `delete`)
- *   to a user's profile requires that their email address has been verified through Firebase Authentication.
- *   Profile creation is permitted before verification to allow the user to be created in the system.
+ * - **Email Verification**: While email verification is encouraged, this ruleset allows
+ *   initial profile creation and updates during onboarding before the user's email
+ *   is verified to ensure a smooth user experience.
  * - **Data Integrity**: On creation, the `id` field within the user document must match the
  *   document's ID (the user's UID). This field is immutable and cannot be changed on update,
  *   ensuring a permanent link between the document and its owner.
@@ -63,7 +63,7 @@ service cloud.firestore {
      * AND that the document they are trying to modify actually exists.
      */
     function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+      return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId));
     }
 
     /**
@@ -87,17 +87,16 @@ service cloud.firestore {
      *              their personal settings and preferences.
      * @path        /users/{userId}
      * @allow       (create) A newly signed-up user (UID 'user123') creating their own profile at `/users/user123`.
-     * @allow       (update) A verified user (UID 'user123') updating their own profile document.
+     * @allow       (update) An unverified user (UID 'user123') updating their own profile document during onboarding.
      * @deny        (list) Any user trying to list all documents in the `/users` collection.
-     * @deny        (update) User 'user123' trying to update their profile before their email is verified.
      * @deny        (delete) User 'abc' trying to delete the profile of user 'xyz'.
-     * @principle   Restricts access to a user's own data tree and requires email verification for modifications.
+     * @principle   Restricts access to a user's own data tree.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false; // Disallow user enumeration for security
       allow create: if isOwner(userId) && clientSetsCorrectId(userId);
-      allow update: if isExistingOwner(userId) && isVerifiedEmailUser() && idIsImmutable();
+      allow update: if isExistingOwner(userId) && idIsImmutable();
       allow delete: if isExistingOwner(userId) && isVerifiedEmailUser();
     }
   }
