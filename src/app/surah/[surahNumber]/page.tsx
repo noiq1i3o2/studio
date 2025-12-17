@@ -27,7 +27,7 @@ interface Surah {
 }
 
 export default function SurahDetailPage({ params }: { params: { surahNumber: string } }) {
-  const { surahNumber } = params;
+  const surahNumber = params.surahNumber;
   const [surah, setSurah] = useState<Surah | null>(null);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -36,6 +36,7 @@ export default function SurahDetailPage({ params }: { params: { surahNumber: str
 
   useEffect(() => {
     async function fetchSurah() {
+      if (!surahNumber) return;
       try {
         setLoading(true);
         const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/editions/quran-uthmani,ar.alafasy`);
@@ -57,12 +58,7 @@ export default function SurahDetailPage({ params }: { params: { surahNumber: str
         setSurah(combinedSurah);
 
         if (audioData.ayahs.length > 0) {
-            // This constructs a URL to fetch the full Surah audio, not just a single Ayah.
-            const firstAyahAudioUrl = audioData.ayahs[0].audio;
-            // It replaces the ayah number part with a special string `_a_` that the API might use for full surah audio, or constructs it differently.
-            // Example: "https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3" becomes "https://cdn.islamic.network/quran/audio/128/ar.alafasy.mp3"
-            // Let's try a more reliable way.
-             const surahAudioUrl = `https://server8.mp3quran.net/afs/${String(surahNumber).padStart(3, '0')}.mp3`;
+            const surahAudioUrl = `https://server8.mp3quran.net/afs/${String(surahNumber).padStart(3, '0')}.mp3`;
             const audioInstance = new Audio(surahAudioUrl);
             audioInstance.onended = () => setIsPlaying(false);
             setAudio(audioInstance);
