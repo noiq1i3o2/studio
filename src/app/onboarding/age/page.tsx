@@ -8,20 +8,46 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Shield } from 'lucide-react';
+import { useUser, useFirestore } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AgePage() {
   const [age, setAge] = useState('');
   const [showParentalGuidance, setShowParentalGuidance] = useState(false);
   const router = useRouter();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
-  const handleContinue = () => {
+
+  const handleContinue = async () => {
     const ageNum = parseInt(age, 10);
+    if (isNaN(ageNum) || ageNum <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Age",
+        description: "Please enter a valid age.",
+      })
+      return;
+    }
+
+    if (user && firestore) {
+        const userRef = doc(firestore, `users/${user.uid}`);
+        setDocumentNonBlocking(userRef, { age: ageNum }, { merge: true });
+    }
+
     if (!isNaN(ageNum) && ageNum < 10) {
       setShowParentalGuidance(true);
     } else {
       router.push('/onboarding/language');
     }
   };
+
+  const handleParentalGuidanceContinue = () => {
+     router.push('/onboarding/language');
+  }
 
   return (
     <Card className="shadow-xl">
@@ -53,7 +79,7 @@ export default function AgePage() {
         )}
       </CardContent>
       <CardFooter>
-        <Button onClick={showParentalGuidance ? () => router.push('/onboarding/language') : handleContinue} className="w-full text-lg font-bold" size="lg">
+        <Button onClick={showParentalGuidance ? handleParentalGuidanceContinue : handleContinue} className="w-full text-lg font-bold" size="lg">
           Continue
         </Button>
       </CardFooter>

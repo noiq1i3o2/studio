@@ -1,10 +1,32 @@
 
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen, CreditCard, Gift, Landmark } from 'lucide-react';
 import Link from 'next/link';
+import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function Home() {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.replace('/home');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12">
       <div className="w-full max-w-md text-center">
@@ -42,7 +64,7 @@ export default function Home() {
 
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
           <Button asChild size="lg" className="font-bold text-lg shadow-md transition-transform hover:scale-105">
-            <Link href="/onboarding/age">Begin My Journey!</Link>
+            <Link href="/login">Begin My Journey!</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="font-bold text-lg shadow-sm transition-transform hover:scale-105">
             <Link href="#learn-more">
