@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the Deen Journey app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "emailVerified": {
+          "type": "boolean",
+          "description": "Indicates whether the user's email address has been verified."
+        },
+        "age": {
+          "type": "number",
+          "description": "User's age. Used to determine appropriate content and guidance."
+        },
+        "preferredLanguage": {
+          "type": "string",
+          "description": "User's preferred language for AI interaction (Deen Buddy)."
+        },
+        "deenDifficulty": {
+          "type": "string",
+          "description": "User's selected difficulty level for Deen content."
+        },
+        "salahDifficulty": {
+          "type": "string",
+          "description": "User's selected difficulty level for Salah content."
+        },
+        "surahDifficulty": {
+          "type": "string",
+          "description": "User's selected difficulty level for Surah content."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "emailVerified",
+        "age",
+        "preferredLanguage"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user data. Includes 'emailVerified' for feature access control.  Path-based ownership for simple security rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to their Firebase Auth UID."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore structure prioritizes security, scalability, and debuggability based on the core design principles. User data is stored in a path-based structure `/users/{userId}` for simple ownership rules. The user document includes `emailVerified` field to control access to certain features based on email verification status.\n\nAuthorization Independence is achieved by storing all necessary authorization data directly within the user document, avoiding the need for `get()` calls in security rules.\n\nQAPs are supported through structural segregation, ensuring that all documents within the `/users/{userId}` collection share the same security requirements. This prevents the need for complex filtering within rules."
+  }
+}

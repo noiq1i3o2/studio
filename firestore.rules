@@ -1,0 +1,104 @@
+/**
+ * # Firestore Security Rules: Deen Journey
+ *
+ * ## Core Philosophy
+ * This ruleset enforces a strict user-ownership model, where each user has complete
+ * control over their own data and no visibility into the data of other users.
+ * The primary security mechanism is path-based authorization, ensuring that a user's
+ * UID in the path (`/users/{userId}`) matches their authenticated UID.
+ *
+ * ## Data Structure
+ * All user-specific data is stored in a top-level `users` collection. Each user's
+ * profile document is located at a path corresponding to their unique Firebase
+ * Authentication UID, for example: `/users/abc123xyz...`.
+ *
+ * ## Key Security Decisions
+ * - **User Data Privacy**: Users can only read or write their own profile document.
+ *   Listing the entire `/users` collection is explicitly disallowed to prevent user enumeration.
+ * - **Email Verification**: To enhance security and prevent abuse, any modification (`update`, `delete`)
+ *   to a user's profile requires that their email address has been verified through Firebase Authentication.
+ *   Profile creation is permitted before verification to allow the user to be created in the system.
+ * - **Data Integrity**: On creation, the `id` field within the user document must match the
+ *   document's ID (the user's UID). This field is immutable and cannot be changed on update,
+ *   ensuring a permanent link between the document and its owner.
+ *
+ * ## Denormalization for Authorization
+ * The security model relies on path-based ownership. The user's UID is part of the document
+ * path, which allows for simple and performant authorization checks without needing to read
+ * other documents (e.g., using `get()`). All authorization decisions are self-contained.
+ *
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions for clear, reusable logic
+
+    /**
+     * Checks if a user is signed into the application.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user is the owner of the document,
+     * based on the wildcard userId from the path.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the signed-in user's email address has been verified.
+     * This is critical for authorizing write operations to prevent abuse from
+     * unverified accounts.
+     */
+    function isVerifiedEmailUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    /**
+     * For destructive operations (update, delete), ensures the user is the owner
+     * AND that the document they are trying to modify actually exists.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * [CREATE] Validates that the client is setting the internal `id` field
+     * to match the user's auth UID, enforcing relational integrity from the start.
+     */
+    function clientSetsCorrectId(userId) {
+      return request.resource.data.id == userId;
+    }
+
+    /**
+     * [UPDATE] Validates that the internal `id` field is not being changed.
+     * This prevents re-assigning a user document to a different user.
+     */
+    function idIsImmutable() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * @description Rules for a user's private profile document. This document contains
+     *              their personal settings and preferences.
+     * @path        /users/{userId}
+     * @allow       (create) A newly signed-up user (UID 'user123') creating their own profile at `/users/user123`.
+     * @allow       (update) A verified user (UID 'user123') updating their own profile document.
+     * @deny        (list) Any user trying to list all documents in the `/users` collection.
+     * @deny        (update) User 'user123' trying to update their profile before their email is verified.
+     * @deny        (delete) User 'abc' trying to delete the profile of user 'xyz'.
+     * @principle   Restricts access to a user's own data tree and requires email verification for modifications.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Disallow user enumeration for security
+      allow create: if isOwner(userId) && clientSetsCorrectId(userId);
+      allow update: if isExistingOwner(userId) && isVerifiedEmailUser() && idIsImmutable();
+      allow delete: if isExistingOwner(userId) && isVerifiedEmailUser();
+    }
+  }
+}
