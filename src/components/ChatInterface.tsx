@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Avatar, AvatarFallback } from './ui/avatar';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
@@ -14,6 +14,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 
 interface Message {
@@ -28,6 +37,7 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [language, setLanguage] = useState('en');
   const { tokens, decrementTokens, resetTokens, tokensDepleted, timeToReset } = useTokens();
+  const [showTokenPopup, setShowTokenPopup] = useState(false);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -51,9 +61,25 @@ export function ChatInterface() {
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (tokensDepleted) {
+        setShowTokenPopup(true);
+    }
+  }, [tokensDepleted]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || tokensDepleted) return;
+    if (!input.trim() || isLoading) {
+        if(tokensDepleted) {
+            setShowTokenPopup(true);
+        }
+        return;
+    }
+     if (tokensDepleted) {
+        setShowTokenPopup(true);
+        return;
+    }
+
 
     decrementTokens();
     const userMessage: Message = { id: Date.now(), text: input, sender: 'user' };
@@ -149,17 +175,25 @@ export function ChatInterface() {
                         <span>{tokens} Tokens Remaining</span>
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>Each message costs 1 token. Tokens reset every 2 hours.</p>
+                        <p>Each message costs 1 token. Tokens reset every hour.</p>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
-            {tokensDepleted && (
-                 <Button variant="link" size="sm" onClick={resetTokens} className="ml-2 h-auto p-0 text-xs">
-                    Reset now
-                </Button>
-            )}
         </div>
       </div>
+       <AlertDialog open={showTokenPopup} onOpenChange={setShowTokenPopup}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>You've reached your message limit</AlertDialogTitle>
+            <AlertDialogDescription>
+              Due to high demand, our servers are currently busy. We've temporarily limited messages to ensure a smooth experience for everyone. Your message credits will reset in {timeToReset}. Thank you for your understanding!
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowTokenPopup(false)}>Got it</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

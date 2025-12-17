@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 
-const INITIAL_TOKENS = 500;
-const RESET_INTERVAL_HOURS = 2;
+const INITIAL_TOKENS = 50;
+const RESET_INTERVAL_HOURS = 1;
 
 export function useTokens() {
   const [tokens, setTokens] = useState(INITIAL_TOKENS);
@@ -26,28 +25,36 @@ export function useTokens() {
     return `${hours}:${minutes}:${seconds}`;
   }, []);
 
+  const resetTokens = useCallback(() => {
+    setTokens(INITIAL_TOKENS);
+    localStorage.setItem('deen-journey-tokens', String(INITIAL_TOKENS));
+    localStorage.removeItem('deen-journey-reset-time');
+    setResetTime(null);
+    setTimeToReset('');
+  }, []);
+
   useEffect(() => {
     const storedTokens = localStorage.getItem('deen-journey-tokens');
     const storedResetTime = localStorage.getItem('deen-journey-reset-time');
 
-    if (storedTokens !== null) {
-      setTokens(Number(storedTokens));
-    } else {
-      localStorage.setItem('deen-journey-tokens', String(INITIAL_TOKENS));
-    }
-
     if (storedResetTime) {
       const resetTimestamp = Number(storedResetTime);
       if (Date.now() >= resetTimestamp) {
-        setTokens(INITIAL_TOKENS);
-        localStorage.setItem('deen-journey-tokens', String(INITIAL_TOKENS));
-        localStorage.removeItem('deen-journey-reset-time');
-        setResetTime(null);
+        resetTokens();
       } else {
         setResetTime(resetTimestamp);
+        if (storedTokens !== null) {
+          setTokens(Number(storedTokens));
+        }
       }
+    } else {
+        if (storedTokens !== null) {
+            setTokens(Number(storedTokens));
+        } else {
+             localStorage.setItem('deen-journey-tokens', String(INITIAL_TOKENS));
+        }
     }
-  }, []);
+  }, [resetTokens]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -59,13 +66,15 @@ export function useTokens() {
            resetTokens();
         }
       }, 1000);
+    } else {
+        setTimeToReset('');
     }
     return () => {
       if (interval) {
         clearInterval(interval);
       }
     };
-  }, [resetTime, calculateTimeToReset]);
+  }, [resetTime, calculateTimeToReset, resetTokens]);
 
   const decrementTokens = () => {
     setTokens((prevTokens) => {
@@ -78,13 +87,6 @@ export function useTokens() {
       }
       return newTokens;
     });
-  };
-
-  const resetTokens = () => {
-    setTokens(INITIAL_TOKENS);
-    localStorage.setItem('deen-journey-tokens', String(INITIAL_TOKENS));
-    localStorage.removeItem('deen-journey-reset-time');
-    setResetTime(null);
   };
   
   const tokensDepleted = tokens <= 0;
