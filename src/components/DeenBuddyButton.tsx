@@ -9,11 +9,8 @@ export function DeenBuddyButton() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, 5 * 60 * 1000); // 5 minutes
-
-    return () => clearTimeout(timer);
+    // Show button immediately
+    setIsVisible(true);
   }, []);
 
   if (!isVisible) {
