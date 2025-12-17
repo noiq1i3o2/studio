@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, getFirestore } from 'firebase/firestore';
 
-const unauthenticatedPaths = ['/', '/login'];
+const unauthenticatedPaths = ['/', '/login', '/verify-email'];
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -32,16 +32,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace('/login');
     } else if (user) {
         if (!user.emailVerified && !isOnboardingPath && pathname !== '/verify-email') {
-            // Logged in but email not verified
-            // Let them complete onboarding, but then force verification
-            // router.replace('/verify-email');
-             // For now we will let them pass
-        } else if (userProfile && !userProfile.age && !isOnboardingPath) {
-            // Profile exists but is incomplete, redirect to onboarding
-            router.replace('/onboarding/age');
-        } else if (isAuthPath) {
-            // Logged in and on a public page, redirect to home
-            router.replace('/home');
+            // Logged in but email not verified, and not on a path that's allowed
+            router.replace('/verify-email');
+        } else if(user.emailVerified) {
+             if (userProfile && !userProfile.age && !isOnboardingPath) {
+                // Profile exists but is incomplete, redirect to onboarding
+                router.replace('/onboarding/age');
+            } else if (isAuthPath) {
+                // Logged in and on a public page, redirect to home
+                router.replace('/home');
+            }
         }
     }
   }, [user, userProfile, isUserLoading, isProfileLoading, pathname, router]);

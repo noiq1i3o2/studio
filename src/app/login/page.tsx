@@ -47,7 +47,8 @@ export default function LoginPage() {
         description: "We've sent a verification link to your email.",
       });
 
-      router.push('/onboarding/age');
+      // Redirect to the verify email page instead of onboarding
+      router.push('/verify-email');
 
     } catch (error: any) {
       toast({

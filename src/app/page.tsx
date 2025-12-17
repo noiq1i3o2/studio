@@ -57,7 +57,7 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground flex items-center justify-center gap-2">
-              <CreditCard className="h-5 w-5" /> No Registration or Credit Card Required.
+              <CreditCard className="h-5 w-5" /> No Credit Card Required.
             </p>
           </CardContent>
         </Card>
