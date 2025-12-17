@@ -1,13 +1,17 @@
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, CreditCard, Gift } from 'lucide-react';
+import { BookOpen, CreditCard, Gift, Landmark } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12">
       <div className="w-full max-w-md text-center">
-        <header className="mb-8">
+        <header className="mb-8 flex flex-col items-center">
+          <div className="mb-4 rounded-full bg-primary/10 p-4 text-primary">
+            <Landmark className="h-16 w-16" />
+          </div>
           <h1 className="font-headline text-5xl font-bold text-primary mb-2">
             Deen Journey
           </h1>

@@ -5,8 +5,16 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, BrainCircuit } from 'lucide-react';
 import { askDeenBuddy } from '@/app/buddy/actions';
+import { useTokens } from '@/hooks/useTokens';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 
 interface Message {
   id: number;
@@ -19,6 +27,7 @@ export function ChatInterface() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [language, setLanguage] = useState('en');
+  const { tokens, decrementTokens, resetTokens, tokensDepleted, timeToReset } = useTokens();
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -44,8 +53,9 @@ export function ChatInterface() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || tokensDepleted) return;
 
+    decrementTokens();
     const userMessage: Message = { id: Date.now(), text: input, sender: 'user' };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
@@ -122,15 +132,33 @@ export function ChatInterface() {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about Islam..."
+            placeholder={tokensDepleted ? `Tokens reset in ${timeToReset}` : "Ask about Islam..."}
             autoComplete="off"
-            disabled={isLoading}
+            disabled={isLoading || tokensDepleted}
             className="flex-1"
           />
-          <Button type="submit" disabled={isLoading || !input.trim()} size="icon">
+          <Button type="submit" disabled={isLoading || !input.trim() || tokensDepleted} size="icon">
             <Send className="h-5 w-5" />
           </Button>
         </form>
+         <div className="mt-2 text-xs text-muted-foreground flex justify-center items-center">
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger className="flex items-center gap-1">
+                        <BrainCircuit className="h-4 w-4" />
+                        <span>{tokens} Tokens Remaining</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Each message costs 1 token. Tokens reset every 2 hours.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+            {tokensDepleted && (
+                 <Button variant="link" size="sm" onClick={resetTokens} className="ml-2 h-auto p-0 text-xs">
+                    Reset now
+                </Button>
+            )}
+        </div>
       </div>
     </div>
   );
